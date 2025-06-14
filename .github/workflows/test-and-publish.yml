@@ -1,0 +1,279 @@
+name: Test and Publish GHA Doc Action
+
+on:
+  push:
+    branches: [main, "releases/**"]
+    paths:
+      - "stratus-gh-actions/gha-doc/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "stratus-gh-actions/gha-doc/**"
+  workflow_dispatch:
+    inputs:
+      publish_marketplace:
+        description: "Publish to GitHub Marketplace"
+        type: boolean
+        default: false
+      version:
+        description: "Version to publish (e.g., v1.2.0)"
+        required: false
+  release:
+    types: [created]
+
+jobs:
+  test:
+    name: Test gha-doc
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.10", "3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          cd stratus-gh-actions/gha-doc
+          pip install -r requirements.txt
+          pip install pytest pytest-cov flake8 black mypy
+
+      - name: Check code formatting with Black
+        run: |
+          cd stratus-gh-actions/gha-doc
+          black --check --diff src tests
+
+      - name: Type check with MyPy
+        run: |
+          cd stratus-gh-actions/gha-doc
+          mypy --ignore-missing-imports src
+
+      - name: Lint with flake8
+        run: |
+          cd stratus-gh-actions/gha-doc
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Run tests
+        run: |
+          cd stratus-gh-actions/gha-doc
+          pytest -xvs --cov=src --cov-report=xml tests/
+
+      - name: Upload Coverage Reports
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./stratus-gh-actions/gha-doc
+          files: ./stratus-gh-actions/gha-doc/coverage.xml
+          flags: gha-doc,python-${{ matrix.python-version }}
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js for Mermaid CLI
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+
+      - name: Install Mermaid CLI
+        run: npm install -g @mermaid-js/mermaid-cli
+
+      - name: Create test workflow files
+        run: |
+          mkdir -p test-workflows
+          cat > test-workflows/workflow1.yml << EOL
+          name: Test Workflow 1
+          on: [push, pull_request]
+          jobs:
+            build:
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v3
+                - name: Run a test
+                  run: echo "Running test"
+          EOL
+
+          cat > test-workflows/workflow2.yml << EOL
+          name: Test Workflow 2
+          on: workflow_dispatch
+          jobs:
+            test:
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v3
+            deploy:
+              needs: test
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v3
+          EOL
+
+      - name: Run the gha-doc tool on test workflows
+        run: |
+          cd stratus-gh-actions/gha-doc
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          mkdir -p test-output
+          python src/main_improved.py --workflow-files "../../test-workflows/*.yml" --output-dir "test-output" --format "html" --generate-diagrams true --diagram-format "svg"
+
+      - name: Verify output files exist
+        run: |
+          cd stratus-gh-actions/gha-doc
+          ls -la test-output
+          # Check if files were created
+          if [ ! -f "test-output/workflow1.html" ] || [ ! -f "test-output/workflow2.html" ]; then
+            echo "Output files not found!"
+            exit 1
+          fi
+          # Check if diagram files were created
+          if [ ! -f "test-output/workflow1-diagram.svg" ] || [ ! -f "test-output/workflow2-diagram.svg" ]; then
+            echo "Diagram files not found!"
+            exit 1
+          fi
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: integration-test-output
+          path: stratus-gh-actions/gha-doc/test-output
+          retention-days: 7
+
+  self-document:
+    name: Self-test Documentation Generator
+    runs-on: ubuntu-latest
+    needs: integration
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js for Mermaid CLI
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+
+      - name: Install Mermaid CLI
+        run: npm install -g @mermaid-js/mermaid-cli
+
+      - name: Generate documentation for workflow files
+        uses: ./stratus-gh-actions/gha-doc
+        with:
+          workflow_files: ".github/workflows/*.yml"
+          output_dir: "stratus-gh-actions/gha-doc/docs/workflows"
+          format: "html"
+          generate_diagrams: true
+          diagram_format: "svg"
+          include_source: false
+          ai_enhancement: false
+
+      - name: Upload documentation artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: workflow-documentation
+          path: stratus-gh-actions/gha-doc/docs/workflows
+          retention-days: 14
+
+      - name: Commit documentation changes
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "docs: update workflow documentation"
+          file_pattern: "stratus-gh-actions/gha-doc/docs/workflows/*"
+
+  publish:
+    name: Publish Release
+    if: |
+      (startsWith(github.ref, 'refs/tags/v') ||
+      github.event_name == 'release' ||
+      (github.event_name == 'workflow_dispatch' && inputs.publish_marketplace == true))
+    needs: [test, integration, self-document]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Extract Release Version
+        id: get_version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.inputs.version }}" != "" ]]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            # Generate version based on date and commit hash
+            HASH=$(git rev-parse --short HEAD)
+            DATE=$(date +'%Y%m%d')
+            echo "VERSION=${DATE}-${HASH}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download documentation artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: workflow-documentation
+          path: docs
+
+      - name: Download integration test artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: integration-test-output
+          path: test-output
+
+      - name: Create release archive
+        run: |
+          mkdir -p release-package
+          cp -r stratus-gh-actions/gha-doc/* release-package/
+          cp -r docs release-package/
+          cp -r test-output release-package/examples/generated
+          tar -czvf gha-doc-${{ steps.get_version.outputs.VERSION }}.tar.gz -C release-package .
+          zip -r gha-doc-${{ steps.get_version.outputs.VERSION }}.zip release-package
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
+        with:
+          name: gha-doc v${{ steps.get_version.outputs.VERSION }}
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', steps.get_version.outputs.VERSION) }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            gha-doc-${{ steps.get_version.outputs.VERSION }}.tar.gz
+            gha-doc-${{ steps.get_version.outputs.VERSION }}.zip
+            stratus-gh-actions/gha-doc/README.md
+            stratus-gh-actions/gha-doc/LICENSE
+            stratus-gh-actions/gha-doc/GETTING_STARTED.md
+
+      - name: Publish to Marketplace
+        if: |
+          (startsWith(github.ref, 'refs/tags/v') ||
+          github.event_name == 'release' ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish_marketplace == true))
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const actionYml = fs.readFileSync('stratus-gh-actions/gha-doc/action.yml', 'utf8');
+
+            // Set up marketplace listing to point to the right version
+            const version = '${{ steps.get_version.outputs.VERSION }}';
+
+            console.log(`Publishing version ${version} to GitHub Marketplace`);
+
+            // In a real scenario, you would use GitHub API to update the marketplace listing
+            // This is a placeholder as direct API for updating marketplace listings is limited
+            console.log('Action would be published to marketplace with version', version);

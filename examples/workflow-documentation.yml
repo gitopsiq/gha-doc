@@ -1,0 +1,45 @@
+name: Generate Workflow Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/**"
+  workflow_dispatch:
+    inputs:
+      workflow_files:
+        description: "Glob pattern for workflow files to document"
+        required: false
+        default: ".github/workflows/*.yml"
+      output_dir:
+        description: "Directory to write documentation to"
+        required: false
+        default: "docs/workflows"
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Generate workflow documentation
+        uses: your-username/gha-doc@v1
+        with:
+          workflow_files: ${{ inputs.workflow_files || '.github/workflows/*.yml' }}
+          output_dir: ${{ inputs.output_dir || 'docs/workflows' }}
+          format: "markdown"
+          generate_diagrams: true
+          include_source: false
+          ai_enhancement: false
+          # ai_api_key: ${{ secrets.OPENAI_API_KEY }} # Uncomment if using AI enhancement
+
+      - name: Commit documentation changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "docs: update workflow documentation"
+          file_pattern: ${{ inputs.output_dir || 'docs/workflows' }}/*

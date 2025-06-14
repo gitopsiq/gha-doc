@@ -1,0 +1,13 @@
+graph TD;
+    build["build"];
+    deploy-dev["deploy-dev"];
+    deploy-staging["deploy-staging"];
+    deploy-prod["deploy-prod"];
+    build --> deploy-dev;
+    build --> deploy-staging;
+    deploy-dev --> deploy-staging;
+    build --> deploy-prod;
+    deploy-staging --> deploy-prod;
+    style deploy-dev fill:#f9f,stroke:#333,stroke-dasharray: 5 5
+    style deploy-staging fill:#f9f,stroke:#333,stroke-dasharray: 5 5
+    style deploy-prod fill:#f9f,stroke:#333,stroke-dasharray: 5 5

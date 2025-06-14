@@ -71,6 +71,7 @@ pytest tests/test_parser.py
 ## Code Style
 
 This project uses:
+
 - [Black](https://black.readthedocs.io/) for code formatting
 - [isort](https://pycqa.github.io/isort/) for import sorting
 - [flake8](https://flake8.pycqa.org/) for linting

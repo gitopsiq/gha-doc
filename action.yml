@@ -1,6 +1,6 @@
 name: "GitHub Actions Documentation Generator"
 description: "Generates comprehensive documentation for GitHub Actions workflows"
-author: "your-username"
+author: "heintonny"
 branding:
   icon: "book-open"
   color: "blue"
@@ -18,62 +18,138 @@ inputs:
     description: "Output format (markdown, html)"
     required: false
     default: "markdown"
-  generate_diagrams:
-    description: "Whether to generate diagrams"
+  include_diagram_type:
+    description: "Type of diagram to include in documentation (none, mermaid, svg)"
+    required: false
+    default: "mermaid"
+  include_workflow_source:
+    description: "Include workflow source YAML in documentation"
+    required: false
+    default: "false"
+  include_ai_suggested_improvements:
+    description: "Include AI-generated suggested improvements section in documentation"
     required: false
     default: "true"
-  diagram_format:
-    description: "Format for generated diagrams (png, svg, pdf)"
+  include_ai_usage_information:
+    description: "Include AI usage information section in documentation"
     required: false
-    default: "png"
-  include_source:
-    description: "Include source code in documentation"
+    default: "true"
+  ai_provider:
+    description: "AI provider to use (openai, azure_openai, anthropic, hf, google, aws, or mock)"
     required: false
-    default: "false"
-  ai_enhancement:
-    description: "Enable AI-powered enhancements"
+    default: "mock"
+
+  # OpenAI specific settings
+  openai_api_key:
+    description: "API key for OpenAI"
     required: false
-    default: "false"
-  ai_api_key:
-    description: "API key for AI service"
+    default: ""
+  openai_model:
+    description: "Model to use for OpenAI (e.g., gpt-3.5-turbo, gpt-4)"
+    required: false
+    default: "gpt-3.5-turbo"
+
+  # Azure OpenAI specific settings
+  azure_openai_api_key:
+    description: "API key for Azure OpenAI"
+    required: false
+    default: ""
+  azure_openai_endpoint:
+    description: "Endpoint URL for Azure OpenAI"
+    required: false
+    default: ""
+  azure_openai_deployment:
+    description: "Deployment name for Azure OpenAI"
     required: false
     default: ""
 
+  # Anthropic specific settings
+  anthropic_api_key:
+    description: "API key for Anthropic Claude"
+    required: false
+    default: ""
+  anthropic_model:
+    description: "Model to use for Anthropic (e.g., claude-2)"
+    required: false
+    default: "claude-2"
+
+  # Hugging Face specific settings
+  hf_api_key:
+    description: "API key for Hugging Face"
+    required: false
+    default: ""
+  hf_model:
+    description: "Model to use for Hugging Face"
+    required: false
+    default: "mistralai/Mistral-7B-Instruct-v0.1"
+
+  # Google AI specific settings
+  google_api_key:
+    description: "API key for Google AI"
+    required: false
+    default: ""
+  google_model:
+    description: "Model to use for Google AI (e.g., gemini-1.0-pro)"
+    required: false
+    default: "gemini-1.0-pro"
+
+  # AWS Bedrock specific settings
+  aws_api_key:
+    description: "API key (Access Key ID) for AWS Bedrock"
+    required: false
+    default: ""
+  aws_secret_key:
+    description: "Secret key (Secret Access Key) for AWS Bedrock"
+    required: false
+    default: ""
+  aws_region:
+    description: "AWS Region for Bedrock API"
+    required: false
+    default: "us-east-1"
+  aws_model:
+    description: "Model to use for AWS Bedrock (e.g., anthropic.claude-v2)"
+    required: false
+    default: "anthropic.claude-v2"
+
+  # GitHub Pages deployment
+  deploy_to_github_pages:
+    description: "Deploy documentation to GitHub Pages"
+    required: false
+    default: "false"
+  github_token:
+    description: "GitHub token for GitHub Pages deployment (automatically provided by GitHub Actions)"
+    required: false
+    default: "${{ github.token }}"
+
 runs:
-  using: "composite"
-  steps:
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
-
-    - name: Install Node.js for Mermaid CLI
-      uses: actions/setup-node@v3
-      if: ${{ inputs.generate_diagrams == 'true' }}
-      with:
-        node-version: "16"
-
-    - name: Install Mermaid CLI
-      if: ${{ inputs.generate_diagrams == 'true' }}
-      run: npm install -g @mermaid-js/mermaid-cli
-      shell: bash
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r ${{ github.action_path }}/requirements.txt
-      shell: bash
-
-    - name: Generate documentation
-      run: python ${{ github.action_path }}/src/main_improved.py
-      shell: bash
-      env:
-        INPUT_WORKFLOW_FILES: ${{ inputs.workflow_files }}
-        INPUT_OUTPUT_DIR: ${{ inputs.output_dir }}
-        INPUT_FORMAT: ${{ inputs.format }}
-        INPUT_GENERATE_DIAGRAMS: ${{ inputs.generate_diagrams }}
-        INPUT_DIAGRAM_FORMAT: ${{ inputs.diagram_format }}
-        INPUT_INCLUDE_SOURCE: ${{ inputs.include_source }}
-        INPUT_AI_ENHANCEMENT: ${{ inputs.ai_enhancement }}
-        INPUT_AI_API_KEY: ${{ inputs.ai_api_key }}
-        GITHUB_WORKSPACE: ${{ github.workspace }}
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - "--workflow-files"
+    - "${{ inputs.workflow_files }}"
+    - "--output-dir"
+    - "${{ inputs.output_dir }}"
+    - "--format"
+    - "${{ inputs.format }}"
+    - "--include-diagram-type"
+    - "${{ inputs.include_diagram_type }}"
+    - "${{ inputs.include_workflow_source == 'true' && '--include-workflow-source' || '' }}"
+    - "${{ inputs.include_ai_suggested_improvements == 'true' && '--include-ai-suggested-improvements' || '' }}"
+    - "${{ inputs.include_ai_usage_information == 'true' && '--include-ai-usage-information' || '' }}"
+  env:
+    AI_PROVIDER: ${{ inputs.ai_provider }}
+    OPENAI_API_KEY: ${{ inputs.openai_api_key }}
+    OPENAI_MODEL: ${{ inputs.openai_model }}
+    AZURE_OPENAI_API_KEY: ${{ inputs.azure_openai_api_key }}
+    AZURE_OPENAI_ENDPOINT: ${{ inputs.azure_openai_endpoint }}
+    AZURE_OPENAI_DEPLOYMENT: ${{ inputs.azure_openai_deployment }}
+    ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+    ANTHROPIC_MODEL: ${{ inputs.anthropic_model }}
+    HF_API_KEY: ${{ inputs.hf_api_key }}
+    HF_MODEL: ${{ inputs.hf_model }}
+    GOOGLE_API_KEY: ${{ inputs.google_api_key }}
+    GOOGLE_MODEL: ${{ inputs.google_model }}
+    AWS_API_KEY: ${{ inputs.aws_api_key }}
+    AWS_SECRET_KEY: ${{ inputs.aws_secret_key }}
+    AWS_REGION: ${{ inputs.aws_region }}
+    AWS_MODEL: ${{ inputs.aws_model }}

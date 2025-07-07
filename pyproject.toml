@@ -7,7 +7,7 @@ name = "gha-doc"
 version = "0.1.0"
 description = "GitHub Actions Documentation Generator"
 authors = [
-    {name = "HafslundEcoVannkraft", email = "devops@example.com"}
+    {name = "gitopsiq", email = "devops@example.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.8"

@@ -1,0 +1,63 @@
+name: Deploy Workflow Documentation to GitHub Pages
+
+on:
+  workflow_dispatch: # Manual trigger
+  schedule:
+    - cron: "0 0 * * 1" # Weekly on Monday at midnight
+
+jobs:
+  document-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    # Environment for GitHub Pages deployment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch all history for accurate changes
+
+      - name: Generate documentation with GitHub Pages deployment
+        uses: gitopsiq/gha-doc@v1
+        with:
+          workflow_files: ".github/workflows/*.yml"
+          output_dir: "docs/workflows"
+          format: "html"
+          generate_diagrams: true
+          include_diagram_type: "svg"
+          include_source: false
+
+          # AI enhancement configuration - using Azure OpenAI for enterprise environments
+          ai_enhancement: true
+          ai_provider: "azure_openai"
+
+          # Azure OpenAI configuration
+          azure_openai_api_key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          azure_openai_endpoint: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          azure_openai_deployment: "gpt-4"
+
+          # GitHub Pages deployment
+          deploy_to_github_pages: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Setup GitHub Pages
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v3
+
+      # Upload artifact
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: "docs/workflows"
+
+      # Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2

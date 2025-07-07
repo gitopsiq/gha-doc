@@ -75,8 +75,8 @@ class TestDocumentationGenerator(unittest.TestCase):
         """Test generating markdown documentation."""
         self.generator.generate("test_output.md")
 
-        # Check that the file was written
-        mock_file.assert_called_once_with("test_output.md", 'w')
+        # Check that the file was written - now checking with any_call since it includes encoding
+        mock_file.assert_any_call("test_output.md", 'w', encoding='utf-8')
 
         # Get the written content
         content = ''.join(call_args[0][0] for call_args in mock_file().write.call_args_list)
@@ -96,20 +96,35 @@ class TestDocumentationGenerator(unittest.TestCase):
     @patch("builtins.open", new_callable=mock_open)
     def test_generate_html(self, mock_file):
         """Test generating HTML documentation."""
+        # Configure mock to return template content when reading template file
+        template_html = """
+        <html>
+        <head>
+            <title>{{ workflow_name }}</title>
+        </head>
+        <body>
+            {{ content_html }}
+        </body>
+        </html>
+        """
+        mock_file.return_value.__enter__.return_value.read.return_value = template_html
+
         generator = DocumentationGenerator(self.workflow_data, format='html')
         generator.generate("test_output.html")
 
-        # Check that the file was written
-        mock_file.assert_called_once_with("test_output.html", 'w')
+        # Check that the file was written (it's the last call to open)
+        mock_file.assert_any_call("test_output.html", 'w', encoding='utf-8')
 
-        # Get the written content
-        content = ''.join(call_args[0][0] for call_args in mock_file().write.call_args_list)
+        # Get the written content - this is now what's written after template rendering
+        write_calls = [args[0] for name, args, kwargs in mock_file().mock_calls if name == 'write']
+        content = ''.join(write_calls)
 
         # Check some expected content
         self.assertIn("<html", content)
         self.assertIn("<title>Test Workflow</title>", content)
-        # Our current implementation just wraps markdown in pre tags
-        self.assertIn("<pre># GitHub Actions Workflow: Test Workflow", content)
+        # Check for properly converted markdown-to-HTML tags
+        self.assertIn("<h1 id=", content)  # Check for h1 with ID attribute
+        self.assertIn("GitHub Actions Workflow: Test Workflow", content)  # Check for content separately
 
 
 if __name__ == '__main__':

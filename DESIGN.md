@@ -44,7 +44,7 @@ gha-doc is a composite action for automatically generating comprehensive documen
 4. **Dependency Tracker**: Identifies calls to reusable workflows and composite actions
 5. **Visualization Engine**: Generates diagrams showing workflow structure and dependencies
 6. **Documentation Generator**: Creates standardized documentation in multiple formats
-7. **AI Enhancement Module**: Optional component to enhance documentation with LLM-generated content
+7. **AI Enhancement Module**: Optional component to enhance documentation with LLM-generated content from multiple providers (OpenAI, Azure OpenAI, Anthropic, etc.)
 
 ## Implementation Details
 
@@ -152,10 +152,18 @@ inputs:
 
 ### Phase 4: AI Enhancement (Optional)
 
-1. Add integration with OpenAI API
-2. Implement description enhancement
-3. Add best practices suggestions
-4. Generate usage examples
+1. Implement multi-provider LLM integration
+   - OpenAI API
+   - Azure OpenAI API
+   - Anthropic Claude API
+   - Hugging Face Inference API
+   - Google AI API
+   - AWS Bedrock API
+2. Share full workflow YAML with LLM for in-depth context-aware analysis
+3. Implement description enhancement based on specific workflow details
+4. Add best practices suggestions tailored to the workflow's actual structure
+5. Generate usage examples specific to the workflow's triggers and inputs
+6. Provide technical implementation notes analyzing the workflow's architecture
 
 ### Phase 5: Additional Features
 
@@ -170,14 +178,29 @@ As a GitHub Action:
 
 ```yaml
 - name: Generate GitHub Actions Documentation
-  uses: your-username/gha-doc@v1
+  uses: gitopsiq/gha-doc@v1
   with:
     workflow_files: ".github/workflows/*.yml"
     output_dir: "docs/workflows"
     format: "markdown"
     generate_diagrams: true
-    ai_enhancement: false
-    ai_api_key: ${{ secrets.OPENAI_API_KEY }}
+
+    # AI Enhancement Configuration
+    ai_enhancement: true
+    ai_provider: "openai" # Options: openai, azure_openai, anthropic, hf, google, aws, mock
+
+    # OpenAI specific settings
+    openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+    openai_model: "gpt-4"
+
+    # Azure OpenAI settings (if using azure_openai provider)
+    # azure_openai_api_key: ${{ secrets.AZURE_OPENAI_API_KEY }}
+    # azure_openai_endpoint: "https://your-resource.openai.azure.com"
+    # azure_openai_deployment: "gpt-4"
+
+    # Anthropic settings (if using anthropic provider)
+    # anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+    # anthropic_model: "claude-2"
 ```
 
 As a CLI tool:
@@ -188,15 +211,25 @@ gha-doc generate --workflow-files ".github/workflows/*.yml" --output-dir "docs/w
 
 ## Configuration
 
-| Option            | Description                                 | Default                    |
-| ----------------- | ------------------------------------------- | -------------------------- |
-| workflow_files    | Glob pattern for workflow files to document | '.github/workflows/\*.yml' |
-| output_dir        | Directory to write documentation to         | 'docs/workflows'           |
-| format            | Output format (markdown, html)              | 'markdown'                 |
-| generate_diagrams | Whether to generate diagrams                | true                       |
-| include_source    | Include source code in documentation        | false                      |
-| ai_enhancement    | Enable AI-powered enhancements              | false                      |
-| ai_api_key        | API key for AI service                      | None                       |
+| Option                  | Description                                 | Default                              |
+| ----------------------- | ------------------------------------------- | ------------------------------------ |
+| workflow_files          | Glob pattern for workflow files to document | '.github/workflows/\*.yml'           |
+| output_dir              | Directory to write documentation to         | 'docs/workflows'                     |
+| format                  | Output format (markdown, html)              | 'markdown'                           |
+| generate_diagrams       | Whether to generate diagrams                | true                                 |
+| include_source          | Include source code in documentation        | false                                |
+| ai_enhancement          | Enable AI-powered enhancements              | false                                |
+| ai_provider             | AI provider to use                          | 'mock'                               |
+| openai_api_key          | API key for OpenAI                          | None                                 |
+| openai_model            | Model to use for OpenAI                     | 'gpt-3.5-turbo'                      |
+| azure_openai_api_key    | API key for Azure OpenAI                    | None                                 |
+| azure_openai_endpoint   | Endpoint for Azure OpenAI                   | None                                 |
+| azure_openai_deployment | Deployment name for Azure OpenAI            | None                                 |
+| anthropic_api_key       | API key for Anthropic Claude                | None                                 |
+| anthropic_model         | Model to use for Anthropic                  | 'claude-2'                           |
+| hf_api_key              | API key for Hugging Face                    | None                                 |
+| hf_model                | Model to use for Hugging Face               | 'mistralai/Mistral-7B-Instruct-v0.1' |
+| deploy_to_github_pages  | Deploy documentation to GitHub Pages        | false                                |
 
 ## Success Criteria
 
@@ -214,6 +247,9 @@ gha-doc generate --workflow-files ".github/workflows/*.yml" --output-dir "docs/w
 4. Performance analytics for workflows
 5. Support for additional output formats
 6. Integration with GitHub Actions dashboard
+7. Advanced LLM provider options (streaming responses, custom endpoints)
+8. Support for local LLM inference using Ollama or similar tools
+9. Fine-tuned model for GitHub Actions documentation specifically
 
 ## References
 
@@ -221,3 +257,7 @@ gha-doc generate --workflow-files ".github/workflows/*.yml" --output-dir "docs/w
 - [Mermaid Diagram Syntax](https://mermaid-js.github.io/mermaid/#/)
 - [Markdown Guide](https://www.markdownguide.org/)
 - [OpenAI API Documentation](https://platform.openai.com/docs/)
+- [Azure OpenAI Service Documentation](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
+- [Anthropic Claude API Documentation](https://docs.anthropic.com/claude/reference/getting-started-with-the-api)
+- [Hugging Face Inference API](https://huggingface.co/docs/api-inference/index)
+- [GitHub Pages Documentation](https://docs.github.com/en/pages)

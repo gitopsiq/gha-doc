@@ -11,18 +11,40 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub Actions Marketplace](https://img.shields.io/badge/GitHub%20Actions-Marketplace-blue)](https://github.com/marketplace/actions/github-actions-documentation-generator)
 
-> **Note**: This repository was migrated from its original company repository to a personal account. All functionality has been preserved.
-
 ## Features
 
 - **Workflow Analysis:** Parse and analyze GitHub Actions workflow YAML files
 - **Standardized Documentation:** Generate consistent, high-quality documentation
 - **Visual Diagrams:** Create visual representations of workflow structure and job dependencies
 - **Multiple Formats:** Output in Markdown or HTML format
-- **AI Enhancement:** OpenAI-powered descriptions and best practices with fallback to mock responses
-- **Image Rendering:** Generate actual PNG/SVG/PDF images from Mermaid diagrams
+- **Multi-Provider AI Enhancement:** Support for multiple LLM providers:
+  - OpenAI (GPT-3.5 Turbo, GPT-4)
+  - Azure OpenAI (Enterprise-grade OpenAI)
+  - Anthropic Claude
+  - Hugging Face (open source models)
+  - Google AI (Gemini models)
+  - AWS Bedrock
+  - Mock provider for testing
+- **GitHub Pages Integration:** Optional automatic deployment to GitHub Pages
+- **Image Rendering:** Generate actual SVG/PNG/PDF images from Mermaid diagrams
+- **Workflow Source Integration:** Option to include the original workflow YAML in documentation
 - **Dark Mode Support:** HTML documentation with automatic dark mode
 - **Simple Integration:** Easy to add to your CI/CD pipeline
+- **Containerized Approach:** Runs in a Docker container with all dependencies pre-installed
+
+## Container Structure
+
+This action runs within a Docker container for reliable execution across different GitHub Actions runners. The container includes:
+
+- **Base Image:** `mcr.microsoft.com/playwright:v1.52.0-jammy` which includes:
+  - Ubuntu 22.04 (Jammy Jellyfish)
+  - Node.js for running Mermaid CLI
+  - Pre-installed browser dependencies needed for SVG/PNG rendering
+- **Python Environment:** Python 3 with all required packages
+- **Mermaid CLI:** Globally installed for diagram generation
+- **Playwright:** Configured with Chromium browser for headless rendering
+
+This containerized approach ensures all dependencies are properly installed and resolves common issues with missing browser dependencies when generating diagrams.
 
 ## Usage
 
@@ -48,16 +70,18 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Generate documentation
-        uses: your-username/gha-doc@v1
+        uses: gitopsiq/gha-doc@v1
         with:
           workflow_files: ".github/workflows/*.yml"
           output_dir: "docs/workflows"
           format: "html" # Can be 'markdown' or 'html'
-          generate_diagrams: true
-          diagram_format: "svg" # Can be 'png', 'svg', or 'pdf'
-          include_source: false
-          ai_enhancement: false
-          # ai_api_key: ${{ secrets.OPENAI_API_KEY }} # Uncomment if using AI enhancement
+          include_diagram_type: "svg" # Options: 'none', 'mermaid', 'svg', 'png', 'pdf'
+          include_workflow_source: false # Set to true to include workflow source YAML
+          include_ai_suggested_improvements: true # Set to false to disable AI-generated improvement suggestions
+          include_ai_usage_information: true # Set to false to disable AI-generated usage information
+          ai_provider: "mock" # Choose from: openai, azure_openai, anthropic, hf, google, aws, mock
+          # openai_api_key: ${{ secrets.OPENAI_API_KEY }} # Uncomment if using OpenAI
+          # openai_model: "gpt-4" # Optional: specify OpenAI model
 
       - name: Commit documentation
         uses: stefanzweifel/git-auto-commit-action@v4
@@ -68,7 +92,56 @@ jobs:
 
 ### Local Usage
 
-You can also run the tool locally:
+You can run the tool locally in two ways:
+
+#### Using Docker (Recommended)
+
+This is the most reliable method as it uses the same container environment as the GitHub Action:
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/gha-doc.git
+cd gha-doc
+
+# Build the Docker image
+docker build -t gha-doc .
+
+# Run the tool using Docker
+docker run -v $(pwd):/workdir gha-doc \
+  --workflow-files "/workdir/.github/workflows/*.yml" \
+  --output-dir "/workdir/docs" \
+  --format "html" \
+  --include-diagram-type "svg" \
+  --include-workflow-source
+```
+
+#### Running with Docker (Recommended)
+
+The recommended way to use this tool is from your repository root, mounting the entire repo as `/repo` inside the container. This ensures all workflow references and paths resolve exactly as they do in GitHub Actions and local development.
+
+**Example:**
+
+```sh
+docker run --rm \
+  -v "$(pwd):/workdir" \
+  -w /workdir \
+  gha-doc \
+  --workflow-files ".github/workflows/*.yml" \
+  --output-dir "output" \
+  --format "html" \
+  --include-diagram-type "svg" \
+  --include-workflow-source
+```
+
+- Run this command from the root of your repository.
+- All workflow references (e.g. `uses: .github/workflows/other.yml`) will resolve correctly.
+- No need for complex path rewrites or symlinks.
+
+**Tip:** You can use `--formats "md,html"` to generate both Markdown and HTML outputs in one run.
+
+---
+
+#### Using Local Python Environment
 
 ```bash
 # Clone the repository
@@ -85,26 +158,67 @@ pip install -r requirements.txt
 # Install Mermaid CLI for diagram rendering (requires Node.js)
 npm install -g @mermaid-js/mermaid-cli
 
+# Install Playwright with Chromium (for diagram rendering)
+python -m playwright install --with-deps chromium
+
 # Run the tool
-python src/main_improved.py --workflow-files "../.github/workflows/*.yml" \
-                           --output-dir "./docs" \
-                           --format "html" \
-                           --diagram-format "svg" \
-                           --generate-diagrams
+python src/main.py --workflow-files "../.github/workflows/*.yml" \
+                  --output-dir "./docs" \
+                  --format "html" \
+                  --include-diagram-type "svg" \
+                  --include-workflow-source \
+                  --no-ai-suggested-improvements # To disable AI-generated improvement suggestions
 ```
 
 ## Configuration Options
 
-| Option              | Description                                   | Default                    |
-| ------------------- | --------------------------------------------- | -------------------------- |
-| `workflow_files`    | Glob pattern for workflow files to document   | '.github/workflows/\*.yml' |
-| `output_dir`        | Directory to write documentation to           | 'docs/workflows'           |
-| `format`            | Output format (markdown, html)                | 'markdown'                 |
-| `generate_diagrams` | Whether to generate diagrams                  | true                       |
-| `diagram_format`    | Format for generated diagrams (png, svg, pdf) | 'png'                      |
-| `include_source`    | Include source code in documentation          | false                      |
-| `ai_enhancement`    | Enable AI-powered enhancements                | false                      |
-| `ai_api_key`        | API key for OpenAI API                        | ''                         |
+| Option                              | Description                                               | Default                    |
+| ----------------------------------- | --------------------------------------------------------- | -------------------------- |
+| `workflow_files`                    | Glob pattern for workflow files to document               | '.github/workflows/\*.yml' |
+| `output_dir`                        | Directory to write documentation to                       | 'docs/workflows'           |
+| `format`                            | Output format (markdown, html)                            | 'markdown'                 |
+| `include_diagram_type`              | Type of diagram to include (none, mermaid, svg, png, pdf) | 'mermaid'                  |
+| `include_workflow_source`           | Include workflow source YAML in documentation             | false                      |
+| `include_ai_suggested_improvements` | Include AI-generated improvement suggestions              | true                       |
+| `include_ai_usage_information`      | Include AI-generated usage information                    | true                       |
+| `ai_provider`                       | AI provider to use                                        | 'mock'                     |
+
+### AI Provider-Specific Settings
+
+For each AI provider, you need to provide the corresponding API key and optional model parameters:
+
+#### OpenAI
+
+- `openai_api_key`: Your OpenAI API key
+- `openai_model`: Model to use (default: "gpt-3.5-turbo")
+
+#### Azure OpenAI
+
+- `azure_openai_api_key`: Your Azure OpenAI API key
+- `azure_openai_endpoint`: Your Azure OpenAI endpoint URL
+- `azure_openai_deployment`: Your Azure OpenAI deployment name
+
+#### Anthropic
+
+- `anthropic_api_key`: Your Anthropic API key
+- `anthropic_model`: Model to use (default: "claude-2")
+
+#### Hugging Face
+
+- `hf_api_key`: Your Hugging Face API key
+- `hf_model`: Model to use (default: "mistralai/Mistral-7B-Instruct-v0.1")
+
+#### Google AI
+
+- `google_api_key`: Your Google AI API key
+- `google_model`: Model to use (default: "gemini-1.0-pro")
+
+#### AWS Bedrock
+
+- `aws_api_key`: Your AWS API key (Access Key ID)
+- `aws_secret_key`: Your AWS Secret Key
+- `aws_region`: AWS region (default: "us-east-1")
+- `aws_model`: Model to use (default: "anthropic.claude-v2")
 
 ## Special Documentation Comments
 
@@ -126,6 +240,15 @@ inputs:
     required: true
 ```
 
+## AI Enhanced Documentation
+
+When enabled, the AI enhancement feature generates additional documentation sections using the full workflow YAML as context. This provides more accurate and relevant information tailored to your specific workflow.
+
+The AI enhancement includes:
+
+1. **Usage Information:** Practical information about how to use the workflow, including triggers, inputs, and usage examples.
+2. **Suggested Improvements:** Specific recommendations for improving your particular workflow.
+
 ## Example Output
 
 The generated documentation includes:
@@ -136,8 +259,9 @@ The generated documentation includes:
 4. **Environment Variables:** Required environment setup
 5. **Jobs:** Detailed information for each job
 6. **Concurrency:** Concurrency configuration and explanation
-7. **Usage Examples:** How to use the workflow
-8. **Best Practices:** Recommended usage patterns
+7. **AI-Generated Usage Information:** Practical guidelines for using the workflow
+8. **AI-Suggested Improvements:** Recommended improvements and best practices
+9. **Workflow Source:** Original workflow YAML (when enabled)
 
 ### Example Documentation Screenshot
 
@@ -150,76 +274,70 @@ The generated documentation includes:
 ### Prerequisites
 
 - Python 3.8+
-- PyYAML
-- Markdown
-- Mermaid CLI (for diagram rendering)
+- Node.js 16+ (for Mermaid CLI)
+- Docker (for containerized testing)
 
-### Project Structure
+### Local Testing with Docker
 
+You can locally test the containerized action to ensure it works correctly:
+
+```bash
+# Build the Docker container
+docker build -t gha-doc-test .
+
+# Create a test directory with a sample workflow
+mkdir -p test-workspace/.github/workflows/
+cat > test-workspace/.github/workflows/test-workflow.yml << EOF
+name: Test Workflow
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Test
+        run: echo "Hello World"
+EOF
+
+# Run the container with the test workflow
+docker run -v "$(pwd)/test-workspace:/workdir" gha-doc-test \
+    --workflow-files "/workdir/.github/workflows/*.yml" \
+    --output-dir "/workdir/docs" \
+    --format "markdown" \
+    --include-diagram-type "svg"
+
+# Check the results
+ls -la test-workspace/docs/
 ```
-gha-doc/
-├── action.yml                # GitHub Action definition
-├── README.md                 # Documentation
-├── DESIGN.md                 # Design document
-├── GETTING_STARTED.md        # Getting started guide
-├── STATUS.md                 # Project status report
-├── src/                      # Source code
-│   ├── main.py               # Original entry point
-│   ├── main_improved.py      # Enhanced entry point with extra features
-│   ├── parser.py             # YAML parser
-│   ├── analyzer.py           # Structure analyzer
-│   ├── visualizer.py         # Diagram generator
-│   ├── visualizer_improved.py # Enhanced diagram generator with image rendering
-│   ├── generator.py          # Documentation generator
-│   ├── generator_improved.py # Enhanced documentation generator with better HTML
-│   ├── ai_enhancer.py        # AI enhancement module (mock responses)
-│   ├── ai_enhancer_improved.py # Enhanced AI module with OpenAI integration
-│   ├── template_manager.py   # HTML template manager
-│   └── templates/            # HTML templates
-│       └── default.html      # Default HTML template with dark mode support
-├── examples/                 # Example workflows and documentation
-└── tests/                    # Tests
-    └── ...
-```
+
+Alternatively, you can use the provided `run_tests.sh` script which includes Docker testing capabilities.
 
 ### Running Tests
 
 ```bash
 # Install test dependencies
-pip install pytest pytest-cov black flake8 mypy
-
-# Run code quality checks
-black --check src tests
-mypy --ignore-missing-imports src
-flake8 src tests
+pip install pytest pytest-cov
 
 # Run tests with coverage
-pytest --cov=src tests/
+python -m pytest --cov=src tests/
+
+# Run the provided test script (includes Docker container tests)
+./run_tests.sh
 ```
 
-### CI/CD Pipeline
+## Troubleshooting
 
-This project uses a comprehensive CI/CD pipeline that:
+### Diagram Generation Issues
 
-1. **Tests** the code with multiple Python versions (3.8, 3.10, 3.12)
-2. **Validates** with code quality tools (Black, MyPy, Flake8)
-3. **Runs** integration tests with sample workflows
-4. **Generates** documentation for its own workflows
-5. **Publishes** releases to GitHub and the Marketplace
+The most common issues with diagram generation are related to missing browser dependencies which are required by Mermaid CLI for rendering. This action solves these problems through containerization.
 
-You can manually trigger the workflow to publish a new version to the GitHub Marketplace using the workflow dispatch feature.
+If you encounter issues with diagram generation:
 
-## Roadmap
-
-- [x] Implement image rendering for diagrams
-- [x] Add OpenAI API integration for AI enhancement
-- [x] Improve HTML rendering with better formatting and dark mode
-- [ ] Add GitHub Pages integration
-- [ ] Support for additional output formats (PDF, DOCX)
-- [ ] VSCode extension integration
-- [ ] Performance analytics for workflows
-- [ ] Live preview server
-- [ ] Interactive HTML documentation with collapsible sections
+- Ensure your workflow has sufficient permissions to create and modify files in the output directory
+- Check if the diagram format (mermaid, svg, png, pdf) is supported
+- For local testing, use the provided Docker container for consistent results
 
 ## Contributing
 

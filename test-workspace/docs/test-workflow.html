@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Comprehensive Test & Deploy Pipeline</title>
+    <style>
+      :root {
+        --primary-color: #0366d6;
+        --secondary-color: #6c757d;
+        --bg-color: #ffffff;
+        --text-color: #333333;
+        --border-color: #e1e4e8;
+        --code-bg-color: rgba(27, 31, 35, 0.05);
+        --pre-bg-color: #f6f8fa;
+        --card-bg-color: #f9f9f9;
+      }
+
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --primary-color: #58a6ff;
+          --secondary-color: #8b949e;
+          --bg-color: #0d1117;
+          --text-color: #c9d1d9;
+          --border-color: #30363d;
+          --code-bg-color: rgba(110, 118, 129, 0.4);
+          --pre-bg-color: #161b22;
+          --card-bg-color: #161b22;
+        }
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+        line-height: 1.6;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        color: var(--text-color);
+        background-color: var(--bg-color);
+        transition: all 0.3s ease;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4 {
+        margin-top: 24px;
+        margin-bottom: 16px;
+        font-weight: 600;
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 2em;
+        padding-bottom: 0.3em;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      h2 {
+        font-size: 1.5em;
+        padding-bottom: 0.3em;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      h3 {
+        font-size: 1.25em;
+      }
+      h4 {
+        font-size: 1em;
+      }
+
+      a {
+        color: var(--primary-color);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      code {
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 85%;
+        padding: 0.2em 0.4em;
+        background-color: var(--code-bg-color);
+        border-radius: 3px;
+      }
+
+      pre {
+        background-color: var(--pre-bg-color);
+        border-radius: 3px;
+        padding: 16px;
+        overflow: auto;
+        font-size: 85%;
+        line-height: 1.45;
+      }
+
+      pre code {
+        padding: 0;
+        background-color: transparent;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 16px;
+      }
+
+      table,
+      th,
+      td {
+        border: 1px solid var(--border-color);
+      }
+
+      th,
+      td {
+        padding: 6px 13px;
+      }
+
+      tr:nth-child(even) {
+        background-color: var(--pre-bg-color);
+      }
+
+      .job-card {
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: var(--card-bg-color);
+      }
+
+      .job-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .badge {
+        background-color: var(--primary-color);
+        color: #ffffff;
+        border-radius: 12px;
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+
+      .footer {
+        margin-top: 40px;
+        font-size: 14px;
+        color: var(--secondary-color);
+        text-align: center;
+      }
+
+      .workflow-diagram img {
+        max-width: 100%;
+      }
+
+      .container {
+        padding: 1rem;
+      }
+
+      .banner {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
+      .diagram {
+        text-align: center;
+        margin: 2rem 0;
+      }
+
+      .alert {
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+      }
+
+      .alert-info {
+        color: #0c5460;
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+      }
+
+      .mermaid {
+        margin: 20px 0;
+      }
+
+      /* Theme toggle button */
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 8px 16px;
+        cursor: pointer;
+      }
+    </style>
+    <!-- Mermaid JS for rendering diagrams inline -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        mermaid.initialize({ startOnLoad: true });
+
+        // Convert pre blocks with mermaid class to mermaid diagrams
+        const mermaidBlocks = document.querySelectorAll("pre code.language-mermaid");
+        mermaidBlocks.forEach((block) => {
+          const mermaidDiv = document.createElement("div");
+          mermaidDiv.className = "mermaid";
+          mermaidDiv.innerHTML = block.innerHTML;
+          block.parentNode.replaceWith(mermaidDiv);
+        });
+      });
+
+      // Theme toggle function
+      function toggleTheme() {
+        document.body.classList.toggle("dark-theme");
+        localStorage.setItem(
+          "theme",
+          document.body.classList.contains("dark-theme") ? "dark" : "light"
+        );
+      }
+
+      // Apply saved theme on load
+      document.addEventListener("DOMContentLoaded", function () {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") {
+          document.body.classList.add("dark-theme");
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
+    <div class="container">
+      <div class="banner">
+        <h1>Comprehensive Test & Deploy Pipeline</h1>
+        <p>This workflow handles the complete CI/CD pipeline from testing to deployment, with integrated security checks and notifications.</p>
+      </div>
+
+      <h1 id="github-actions-workflow-comprehensive-test-deploy-pipeline">GitHub Actions Workflow: Comprehensive Test &amp; Deploy Pipeline</h1>
+<blockquote>
+<p><strong>Note:</strong> This documentation is auto-generated. For details, see the workflow YAML.</p>
+</blockquote>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#workflow-diagram">Workflow Diagram</a></li>
+<li><a href="#triggers">Triggers</a></li>
+<li><a href="#inputs">Inputs</a></li>
+<li><a href="#environment-variables">Environment Variables</a></li>
+<li><a href="#jobs">Jobs</a></li>
+<li><a href="#execution-flow">Execution Flow</a></li>
+<li><a href="#related-documentation">Related Documentation</a></li>
+</ul>
+<hr />
+<h2 id="overview">Overview</h2>
+<p>This workflow handles the complete CI/CD pipeline from testing to deployment, with integrated security checks and notifications.</p>
+<p><strong>File Path:</strong> <code>./.github/workflows/test-workflow.yml</code></p>
+<hr />
+<h2 id="workflow-diagram">Workflow Diagram</h2>
+<div class="workflow-diagram">
+  <img src="test-workflow-diagram.png" alt="Workflow Diagram">
+</div>
+
+<hr />
+<h2 id="triggers">Triggers</h2>
+<table>
+<thead>
+<tr>
+<th>Event Type</th>
+<th>Conditions</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>push</code></td>
+<td>branches: <code>main</code>, <code>develop</code>, paths-ignore: <code>**.md</code>, <code>docs/**</code></td>
+<td>Run workflow when code is pushed to main or develop branches, ignoring documentation files</td>
+</tr>
+<tr>
+<td><code>pull_request</code></td>
+<td>branches: <code>main</code>, <code>develop</code>, types: <code>opened</code>, <code>synchronize</code>, <code>reopened</code></td>
+<td>Run workflow when PRs are opened or updated against main or develop branches</td>
+</tr>
+<tr>
+<td><code>schedule</code></td>
+<td></td>
+<td>Run weekly security scans automatically every Sunday at 2:00 AM UTC</td>
+</tr>
+<tr>
+<td><code>workflow_dispatch</code></td>
+<td>inputs: {"environment": {"description": "Environment to deploy to", "required": true, "default": "staging", "type": "choice", "options": ["staging", "production"]}, "debug-logs": {"description": "Enable debug logging", "required": false, "default": false, "type": "boolean"}}</td>
+<td>Allow manual triggering of the workflow with custom parameters<br>Inputs: <code>environment</code> (required, default: <code>staging</code>), <code>debug-logs</code> (optional, default: <code>False</code>)</td>
+</tr>
+<tr>
+<td>---</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="inputs">Inputs</h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>environment</code></td>
+<td><code>choice</code></td>
+<td>true</td>
+<td><code>staging</code></td>
+<td>Environment to deploy to</td>
+</tr>
+<tr>
+<td><code>debug-logs</code></td>
+<td><code>boolean</code></td>
+<td>false</td>
+<td>N/A</td>
+<td>Enable debug logging</td>
+</tr>
+<tr>
+<td>---</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="environment-variables">Environment Variables</h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Source</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PYTHON_VERSION</code></td>
+<td>Workflow</td>
+<td><code>3.10</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>NODE_VERSION</code></td>
+<td>Workflow</td>
+<td><code>18</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>CACHE_KEY_PREFIX</code></td>
+<td>Workflow</td>
+<td><code>v1-dependencies</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>PYTHON_VERSION</code></td>
+<td>Set by user</td>
+<td>-</td>
+<td>Required environment variable</td>
+</tr>
+<tr>
+<td>---</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="jobs">Jobs</h2>
+<h3 id="job-summary">Job Summary</h3>
+<table>
+<thead>
+<tr>
+<th>Job Name</th>
+<th>Runs On</th>
+<th>Depends On</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Code Quality &amp; Linting</td>
+<td><code>ubuntu-latest</code></td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Security Scanning</td>
+<td><code>ubuntu-latest</code></td>
+<td>code-quality</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Unit &amp; Integration Tests</td>
+<td><code>ubuntu-latest</code></td>
+<td>code-quality, security-scan</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Build &amp; Package</td>
+<td><code>ubuntu-latest</code></td>
+<td>test</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Deploy to Staging</td>
+<td><code>ubuntu-latest</code></td>
+<td>build</td>
+<td><code>github.event_name == 'push' &amp;&amp; (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')</code></td>
+</tr>
+<tr>
+<td>Deploy to Production</td>
+<td><code>ubuntu-latest</code></td>
+<td>deploy-staging</td>
+<td><code>github.event_name == 'workflow_dispatch' &amp;&amp; github.event.inputs.environment == 'production'</code></td>
+</tr>
+<tr>
+<td>---</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="code-quality-linting">Code Quality &amp; Linting</h3>
+<div class="job-card">
+  <div class="job-header">
+    <h4>Code Quality & Linting</h4>
+    <span class="badge">Required</span>
+  </div>
+  <p>Code Quality & Linting job</p>
+  <table>
+    <tr><td><strong>Runs On</strong></td><td>ubuntu-latest</td></tr>
+  </table>
+  <div class="steps">
+    <p><strong>Steps</strong>:</p>
+    <ol>
+      <li>Checkout Repository</li>
+      <li>Set up Python</li>
+      <li>Install Linting Tools</li>
+      <li>Run Linters</li>
+      <li>Set Quality Status</li>
+    </ol>
+  </div>
+</div>
+
+<h3 id="security-scanning">Security Scanning</h3>
+<div class="job-card">
+  <div class="job-header">
+    <h4>Security Scanning</h4>
+    <span class="badge">Dependent</span>
+  </div>
+  <p>Security Scanning job</p>
+  <table>
+    <tr><td><strong>Runs On</strong></td><td>ubuntu-latest</td></tr>
+    <tr><td><strong>Depends On</strong></td><td>code-quality</td></tr>
+  </table>
+  <div class="steps">
+    <p><strong>Steps</strong>:</p>
+    <ol>
+      <li>Checkout Repository</li>
+      <li>Set up Python</li>
+      <li>Install Security Tools</li>
+      <li>Check Dependencies</li>
+      <li>Run Security Scan</li>
+    </ol>
+  </div>
+</div>
+
+<h3 id="unit-integration-tests">Unit &amp; Integration Tests</h3>
+<div class="job-card">
+  <div class="job-header">
+    <h4>Unit & Integration Tests</h4>
+    <span class="badge">Dependent</span>
+  </div>
+  <p>Unit & Integration Tests job</p>
+  <table>
+    <tr><td><strong>Runs On</strong></td><td>ubuntu-latest</td></tr>
+    <tr><td><strong>Depends On</strong></td><td>code-quality, security-scan</td></tr>
+    <tr><td><strong>Strategy</strong></td><td>Matrix with {"python-version": ["3.9", "3.10", "3.11"], "os": ["ubuntu-latest", "windows-latest"]}, fail-fast: False</td></tr>
+    <tr><td><strong>Max Parallel</strong></td><td>None</td></tr>
+  </table>
+  <div class="steps">
+    <p><strong>Steps</strong>:</p>
+    <ol>
+      <li>Checkout Repository</li>
+      <li>Set up Python ${{ matrix.python-version }}</li>
+      <li>Install Dependencies</li>
+      <li>Test with pytest</li>
+      <li>Upload Coverage Report</li>
+    </ol>
+  </div>
+</div>
+
+<h3 id="build-package">Build &amp; Package</h3>
+<div class="job-card">
+  <div class="job-header">
+    <h4>Build & Package</h4>
+    <span class="badge">Dependent</span>
+  </div>
+  <p>Build & Package job</p>
+  <table>
+    <tr><td><strong>Runs On</strong></td><td>ubuntu-latest</td></tr>
+    <tr><td><strong>Depends On</strong></td><td>test</td></tr>
+  </table>
+  <div class="steps">
+    <p><strong>Steps</strong>:</p>
+    <ol>
+      <li>Checkout Repository</li>
+      <li>Set up Python</li>
+      <li>Install Build Tools</li>
+      <li>Build Package</li>
+      <li>Upload Build Artifacts</li>
+    </ol>
+  </div>
+</div>
+
+<h3 id="deploy-to-staging">Deploy to Staging</h3>
+<div class="job-card">
+  <div class="job-header">
+    <h4>Deploy to Staging</h4>
+    <span class="badge">Conditional</span>
+  </div>
+  <p>Deploy to Staging job</p>
+  <table>
+    <tr><td><strong>Runs On</strong></td><td>ubuntu-latest</td></tr>
+    <tr><td><strong>Depends On</strong></td><td>build</td></tr>
+    <tr><td><strong>Condition</strong></td><td><code>github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')</code></td></tr>
+  </table>
+  <div class="steps">
+    <p><strong>Steps</strong>:</p>
+    <ol>
+      <li>Download Build Artifacts</li>
+      <li>Deploy to Staging</li>
+      <li>Send Notification</li>
+    </ol>
+  </div>
+</div>
+
+<h3 id="deploy-to-production">Deploy to Production</h3>
+<div class="job-card">
+  <div class="job-header">
+    <h4>Deploy to Production</h4>
+    <span class="badge">Conditional</span>
+  </div>
+  <p>Deploy to Production job</p>
+  <table>
+    <tr><td><strong>Runs On</strong></td><td>ubuntu-latest</td></tr>
+    <tr><td><strong>Depends On</strong></td><td>deploy-staging</td></tr>
+    <tr><td><strong>Condition</strong></td><td><code>github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'</code></td></tr>
+  </table>
+  <div class="steps">
+    <p><strong>Steps</strong>:</p>
+    <ol>
+      <li>Download Build Artifacts</li>
+      <li>Deploy to Production</li>
+      <li>Send Notification</li>
+    </ol>
+  </div>
+</div>
+
+<hr />
+<h2 id="execution-flow">Execution Flow</h2>
+<div class="codehilite"><pre><span></span><code>code-quality
+  └─► security-scan
+    └─► test
+      └─► build
+        └─► deploy-staging
+          └─► deploy-production
+</code></pre></div>
+
+<hr />
+<h2 id="ai-generated-usage-information">AI-Generated Usage Information</h2>
+<blockquote>
+<p>This comprehensive GitHub Actions workflow is designed to manage an entire CI/CD pipeline for code housed in a GitHub repository. It's particularly suited for Python-based projects needing code quality checks, security scans, testing across multiple environments, build &amp; packaging of artifacts, and deployment to staging and production environments. This workflow should be used when you require thorough checks and deployment automation with a preference for cleanliness, security, and reliability of the codebase.</p>
+<p>You can trigger this workflow in several ways:</p>
+<p>a. Automatically, when code is pushed to the <code>main</code> or <code>develop</code> branches (excluding markdown and documentation files located in the <code>docs</code> directory).
+b. Upon opening, synchronizing, or reopening a pull request against the <code>main</code> or <code>develop</code> branches.
+c. A scheduled trigger for weekly security scanning each Sunday at 2:00 AM UTC.
+d. Manually using the <code>workflow_dispatch</code> event, which allows for specifying the target environment ("staging" or "production") and whether to enable verbose debug logging.</p>
+<p>For manual triggering via <code>workflow_dispatch</code>, you can supply inputs using the GitHub UI or through the API. For instance, to trigger deployment to production with debug logs enabled, you would set <code>environment</code> to <code>"production"</code> and <code>debug-logs</code> to <code>true</code>.</p>
+<p>When the workflow runs successfully, you can expect:</p>
+<ul>
+<li>Code quality checks, including linting and static analysis, to pass without errors.</li>
+<li>Successful scans for security vulnerabilities in both the codebase and dependencies.</li>
+<li>Completion of unit and integration tests across multiple Python versions and operating systems with no failures.</li>
+<li>Creation of a built Python package artifact, which is then used for deployment.</li>
+<li>If changes are on <code>main</code> or <code>develop</code>, an automatic deployment to a staging environment occurs, along with notifications sent to a configured Slack channel.</li>
+<li>For production deployment, manual approval is required, after which the same deployment and notification steps as for staging occur, tailored for the production environment.</li>
+</ul>
+<p>The workflow produces a Python package artifact and reports any issues found during linting, security scanning, and testing. Notifications about deployment status are sent to Slack, but you must replace placeholder values with real secrets to enable these notifications in a production setup.</p>
+<p>Common use cases for this workflow include projects that require stringent quality and security assurances before deployment, those that practice branch-based deployment strategies (e.g., to separate staging and production environments), or any repository where maintainers wish to have both automated and manual control over the deployment process. It's especially handy where Python dependencies need to be cached for faster build times and where multi-environment testing is critical.</p>
+</blockquote>
+<h2 id="ai-suggested-improvements">AI-Suggested Improvements</h2>
+<blockquote>
+<ol>
+<li>Implement Dependency Caching:</li>
+<li>This workflow makes use of Python and installs dependencies in multiple jobs (<code>code-quality</code>, <code>security-scan</code>, <code>test</code>, <code>build</code>). Utilizing cache can significantly reduce build times and save GitHub Actions minutes.</li>
+<li>Caching dependencies will allow you to reuse the same packages across workflow runs if the dependency files (<code>requirements.txt</code>, etc.) have not changed, avoiding unnecessary downloads from PyPI.</li>
+</ol>
+<p>Implementation example:
+   <code>yaml
+   - name: Cache Python dependencies
+     uses: actions/cache@v3
+     with:
+       path: ~/.cache/pip
+       key: ${{ env.CACHE_KEY_PREFIX }}-${{ runner.os }}-py-${{ hashFiles('**/requirements*.txt') }}
+       restore-keys: |
+         ${{ env.CACHE_KEY_PREFIX }}-${{ runner.os }}-py-</code></p>
+<ol>
+<li>Introduce Job Timeouts:</li>
+<li>The workflow does not implement timeouts, which can result in unnecessarily prolonged or "stuck" actions that can consume CI/CD minutes and potentially block the pipeline.</li>
+<li>Setting job timeouts enforces limits on how long a job can run before being automatically cancelled. This helps to reduce the risk of exhausting resources and stuck jobs.</li>
+</ol>
+<p>Implementation example:
+   <code>yaml
+   jobs:
+     code-quality:
+       timeout-minutes: 10
+       # ... rest of job ...</code></p>
+<ol>
+<li>Utilize Secrets for Sensitive Data:</li>
+<li>The <code>notify</code> step suggests you would reference secrets for the Slack webhook; however, the example does not include usage of GitHub secrets.</li>
+<li>Using GitHub secrets for sensitive information such as API keys, access tokens, and webhook URLs is vital for security. Storing sensitive information in the repository, even if it's private, is a bad practice and can result in compromised systems if the data is exposed.</li>
+</ol>
+<p>Implementation example:
+   <code>yaml
+   # In the 'env:' section of the 'notify' step
+   env:
+     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}</code></p>
+<ol>
+<li>Include Artifact Verification Before Deployment:</li>
+<li>The deployment steps (<code>deploy-staging</code>, <code>deploy-production</code>) do not include any artifact verification to check the integrity of the package before it is deployed.</li>
+<li>Including a checksum verification or digital signature check can ensure that the artifacts have not been tampered with or corrupted between the build and deployment steps.</li>
+</ol>
+<p>Implementation example:
+   <code>yaml
+   - name: Verify Build Artifacts
+     run: |
+       echo "Verifying build artifacts checksum..."
+       # Replace 'file_to_verify' and 'checksum_file' with actual filenames
+       sha256sum -c checksum_file</code></p>
+<ol>
+<li>Error Handling and Notifications for Failed Steps:</li>
+<li>The workflow does not appear to handle failure cases or send notifications for failed builds.</li>
+<li>Implementing error handling and sending notifications on failure alert the relevant team members quickly so they can take action, which is crucial for maintaining a robust CI/CD pipeline.</li>
+</ol>
+<p>Implementation example:
+   <code>yaml
+   jobs:
+     # ... other job definitions ...
+     notify-on-failure:
+       runs-on: ubuntu-latest
+       if: ${{ failure() }}
+       steps:
+         - name: Notify on Failure
+           uses: some/notification-action@version
+           with:
+             message: "Workflow failed at ${{ github.event_name }}"
+             # ... other configuration ...
+           env:
+             # ... environment variables and secrets ...</code></p>
+</blockquote>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="https://docs.github.com/en/actions">GitHub Actions Documentation</a></li>
+<li><a href="https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions">Workflow Syntax Reference</a></li>
+</ul>
+<hr />
+
+      <div class="footer">
+        <p>Generated by GitHub Actions Documentation Generator v1.0.0</p>
+        <p>
+          Last updated: 2025-06-15 •
+          <a href="https://github.com/your-username/gha-doc/issues">Report an issue</a>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

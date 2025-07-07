@@ -1,0 +1,11 @@
+graph TD;
+    test["Test gha-doc (Matrix)"];
+    integration["Integration Tests"];
+    self-document["Self-test Documentation Generator"];
+    publish["Publish Release"];
+    test --> integration;
+    integration --> self-document;
+    test --> publish;
+    integration --> publish;
+    self-document --> publish;
+    style publish fill:#e0f0ff,stroke:#0067b8,stroke-dasharray: 5 5

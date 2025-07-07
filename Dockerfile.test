@@ -1,0 +1,15 @@
+# Dockerfile for running unit tests
+FROM gha-doc
+
+# Install pytest if not already installed
+RUN pip install pytest
+
+# Copy the test files (src is already in the base image)
+COPY tests/ /app/tests/
+
+# Set PYTHONPATH to include src directory
+ENV PYTHONPATH=/app:/app/src
+
+# Override the entrypoint to run pytest instead
+ENTRYPOINT []
+CMD ["python3", "-m", "pytest", "-xvs", "tests/"]

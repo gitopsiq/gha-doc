@@ -1,0 +1,38 @@
+name: Update Documentation with Open Source Models
+
+on:
+  workflow_dispatch: # Manual trigger
+  schedule:
+    - cron: "0 0 * * 1" # Weekly on Monday at midnight
+
+jobs:
+  document:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Generate documentation with Hugging Face models
+        uses: gitopsiq/gha-doc@v1
+        with:
+          workflow_files: ".github/workflows/*.yml"
+          output_dir: "docs/workflows"
+          format: "html"
+          generate_diagrams: true
+
+          # AI enhancement configuration with Hugging Face
+          ai_enhancement: true
+          ai_provider: "hf"
+
+          # Hugging Face configuration
+          hf_api_key: ${{ secrets.HF_API_KEY }}
+          hf_model: "mistralai/Mistral-7B-Instruct-v0.1"
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit-message: "docs: update workflow documentation with open source models"
+          file_pattern: "docs/workflows/*"

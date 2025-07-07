@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test and Publish GHA Doc Action</title>
+    <style>
+      :root {
+        --primary-color: #0366d6;
+        --secondary-color: #6c757d;
+        --bg-color: #ffffff;
+        --text-color: #333333;
+        --border-color: #e1e4e8;
+        --code-bg-color: rgba(27, 31, 35, 0.05);
+        --pre-bg-color: #f6f8fa;
+        --card-bg-color: #f9f9f9;
+      }
+
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --primary-color: #58a6ff;
+          --secondary-color: #8b949e;
+          --bg-color: #0d1117;
+          --text-color: #c9d1d9;
+          --border-color: #30363d;
+          --code-bg-color: rgba(110, 118, 129, 0.4);
+          --pre-bg-color: #161b22;
+          --card-bg-color: #161b22;
+        }
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+        line-height: 1.6;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        color: var(--text-color);
+        background-color: var(--bg-color);
+        transition: all 0.3s ease;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4 {
+        margin-top: 24px;
+        margin-bottom: 16px;
+        font-weight: 600;
+        line-height: 1.25;
+      }
+
+      h1 {
+        font-size: 2em;
+        padding-bottom: 0.3em;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      h2 {
+        font-size: 1.5em;
+        padding-bottom: 0.3em;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      h3 {
+        font-size: 1.25em;
+      }
+      h4 {
+        font-size: 1em;
+      }
+
+      a {
+        color: var(--primary-color);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      code {
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 85%;
+        padding: 0.2em 0.4em;
+        background-color: var(--code-bg-color);
+        border-radius: 3px;
+      }
+
+      pre {
+        background-color: var(--pre-bg-color);
+        border-radius: 3px;
+        padding: 16px;
+        overflow: auto;
+        font-size: 85%;
+        line-height: 1.45;
+      }
+
+      pre code {
+        padding: 0;
+        background-color: transparent;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 16px;
+      }
+
+      table,
+      th,
+      td {
+        border: 1px solid var(--border-color);
+      }
+
+      th,
+      td {
+        padding: 6px 13px;
+      }
+
+      tr:nth-child(even) {
+        background-color: var(--pre-bg-color);
+      }
+
+      .job-card {
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        margin-bottom: 20px;
+        padding: 15px;
+        background-color: var(--card-bg-color);
+      }
+
+      .job-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .badge {
+        background-color: var(--primary-color);
+        color: #ffffff;
+        border-radius: 12px;
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+
+      .footer {
+        margin-top: 40px;
+        font-size: 14px;
+        color: var(--secondary-color);
+        text-align: center;
+      }
+
+      .workflow-diagram img {
+        max-width: 100%;
+      }
+
+      .container {
+        padding: 1rem;
+      }
+
+      .banner {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
+      .diagram {
+        text-align: center;
+        margin: 2rem 0;
+      }
+
+      .alert {
+        padding: 15px;
+        margin-bottom: 20px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+      }
+
+      .alert-info {
+        color: #0c5460;
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+      }
+
+      .mermaid {
+        margin: 20px 0;
+      }
+
+      /* Theme toggle button */
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 8px 16px;
+        cursor: pointer;
+      }
+    </style>
+    <!-- Mermaid JS for rendering diagrams inline -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        mermaid.initialize({ startOnLoad: true });
+
+        // Convert pre blocks with mermaid class to mermaid diagrams
+        const mermaidBlocks = document.querySelectorAll("pre code.language-mermaid");
+        mermaidBlocks.forEach((block) => {
+          const mermaidDiv = document.createElement("div");
+          mermaidDiv.className = "mermaid";
+          mermaidDiv.innerHTML = block.innerHTML;
+          block.parentNode.replaceWith(mermaidDiv);
+        });
+      });
+
+      // Theme toggle function
+      function toggleTheme() {
+        document.body.classList.toggle("dark-theme");
+        localStorage.setItem(
+          "theme",
+          document.body.classList.contains("dark-theme") ? "dark" : "light"
+        );
+      }
+
+      // Apply saved theme on load
+      document.addEventListener("DOMContentLoaded", function () {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") {
+          document.body.classList.add("dark-theme");
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
+    <div class="container">
+      <div class="banner">
+        <h1>Test and Publish GHA Doc Action</h1>
+        <p></p>
+      </div>
+
+      <h1 id="github-actions-workflow-test-and-publish-gha-doc-action">GitHub Actions Workflow: Test and Publish GHA Doc Action</h1>
+<blockquote>
+<p><strong>Note:</strong> This documentation is auto-generated. For details, see the workflow YAML.</p>
+</blockquote>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#workflow-diagram">Workflow Diagram</a></li>
+<li><a href="#triggers">Triggers</a></li>
+<li><a href="#inputs">Inputs</a></li>
+<li><a href="#jobs">Jobs</a></li>
+<li><a href="#execution-flow">Execution Flow</a></li>
+<li><a href="#related-documentation">Related Documentation</a></li>
+</ul>
+<hr />
+<h2 id="overview">Overview</h2>
+<p><strong>File Path:</strong> <code>/repo/.github/workflows/test-and-publish.yml</code></p>
+<hr />
+<h2 id="workflow-diagram">Workflow Diagram</h2>
+<div class="workflow-diagram">
+  <img src="test-and-publish-diagram.svg" alt="Workflow Diagram">
+</div>
+
+<hr />
+<h2 id="triggers">Triggers</h2>
+<table>
+<thead>
+<tr>
+<th>Event Type</th>
+<th>Conditions</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>push</code></td>
+<td>branches: <code>main</code>, <code>releases/**</code>, paths: <code>gitopsiq/gha-doc/**</code></td>
+<td>Triggered when code is pushed to the repository</td>
+</tr>
+<tr>
+<td><code>pull_request</code></td>
+<td>branches: <code>main</code>, paths: <code>gitopsiq/gha-doc/**</code></td>
+<td>Triggered when a pull request is opened, synchronized, or modified</td>
+</tr>
+<tr>
+<td><code>workflow_dispatch</code></td>
+<td>inputs: {"publish_marketplace": {"description": "Publish to GitHub Marketplace", "type": "boolean", "default": false}, "version": {"description": "Version to publish (e.g., v1.2.0)", "required": false}}</td>
+<td>Manually triggered through the GitHub UI or API<br>Inputs: <code>publish_marketplace</code> (optional, default: <code>False</code>), <code>version</code> (optional, no default)</td>
+</tr>
+<tr>
+<td><code>release</code></td>
+<td>types: <code>created</code></td>
+<td>Triggered when a release is created, edited, or other release activity occurs</td>
+</tr>
+<tr>
+<td>---</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="inputs">Inputs</h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>publish_marketplace</code></td>
+<td><code>boolean</code></td>
+<td>false</td>
+<td>N/A</td>
+<td>Publish to GitHub Marketplace</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td><code>string</code></td>
+<td>false</td>
+<td>N/A</td>
+<td>Version to publish (e.g., v1.2.0)</td>
+</tr>
+<tr>
+<td>---</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="jobs">Jobs</h2>
+<h3 id="job-summary">Job Summary</h3>
+<table>
+<thead>
+<tr>
+<th>Job Name</th>
+<th>Runs On</th>
+<th>Depends On</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Test gha-doc</td>
+<td><code>ubuntu-latest</code></td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Integration Tests</td>
+<td><code>ubuntu-latest</code></td>
+<td>test</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Self-test Documentation Generator</td>
+<td><code>ubuntu-latest</code></td>
+<td>integration</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Publish Release</td>
+<td><code>ubuntu-latest</code></td>
+<td>test, integration, self-document</td>
+<td>`(startsWith(github.ref, 'refs/tags/v')</td>
+</tr>
+<tr>
+<td>github.event_name == 'release'</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>(github.event_name == 'workflow_dispatch' &amp;&amp; inputs.publish_marketplace == true))</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>`</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>---</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="test-gha-doc">Test gha-doc</h3>
+<div class="job-card">
+  <div class="job-header">
+    <h4>Test gha-doc</h4>
+    <span class="badge">Required</span>
+  </div>
+  <p>Test gha-doc job</p>
+  <table>
+    <tr><td><strong>Runs On</strong></td><td>ubuntu-latest</td></tr>
+    <tr><td><strong>Strategy</strong></td><td>Matrix with {"python-version": ["3.8", "3.10", "3.12"]}, fail-fast: True</td></tr>
+    <tr><td><strong>Max Parallel</strong></td><td>None</td></tr>
+  </table>
+  <div class="steps">
+    <p><strong>Steps</strong>:</p>
+    <ol>
+      <li>Checkout repository</li>
+      <li>Set up Python ${{ matrix.python-version }}</li>
+      <li>Install dependencies</li>
+      <li>Check code formatting with Black</li>
+      <li>Type check with MyPy</li>
+      <li>Lint with flake8</li>
+      <li>Run tests</li>
+      <li>Upload Coverage Reports</li>
+    </ol>
+  </div>
+</div>
+
+<h3 id="integration-tests">Integration Tests</h3>
+<div class="job-card">
+  <div class="job-header">
+    <h4>Integration Tests</h4>
+    <span class="badge">Dependent</span>
+  </div>
+  <p>Integration Tests job</p>
+  <table>
+    <tr><td><strong>Runs On</strong></td><td>ubuntu-latest</td></tr>
+    <tr><td><strong>Depends On</strong></td><td>test</td></tr>
+  </table>
+  <div class="steps">
+    <p><strong>Steps</strong>:</p>
+    <ol>
+      <li>Checkout repository</li>
+      <li>Set up Node.js for Mermaid CLI</li>
+      <li>Install Mermaid CLI</li>
+      <li>Create test workflow files</li>
+      <li>Run the gha-doc tool on test workflows</li>
+      <li>Verify output files exist</li>
+      <li>Upload test artifacts</li>
+    </ol>
+  </div>
+</div>
+
+<h3 id="self-test-documentation-generator">Self-test Documentation Generator</h3>
+<div class="job-card">
+  <div class="job-header">
+    <h4>Self-test Documentation Generator</h4>
+    <span class="badge">Dependent</span>
+  </div>
+  <p>Self-test Documentation Generator job</p>
+  <table>
+    <tr><td><strong>Runs On</strong></td><td>ubuntu-latest</td></tr>
+    <tr><td><strong>Depends On</strong></td><td>integration</td></tr>
+  </table>
+  <div class="steps">
+    <p><strong>Steps</strong>:</p>
+    <ol>
+      <li>Checkout repository</li>
+      <li>Set up Node.js for Mermaid CLI</li>
+      <li>Install Mermaid CLI</li>
+      <li>Generate documentation for workflow files</li>
+      <li>Upload documentation artifacts</li>
+      <li>Commit documentation changes</li>
+    </ol>
+  </div>
+</div>
+
+<h3 id="publish-release">Publish Release</h3>
+<div class="job-card">
+  <div class="job-header">
+    <h4>Publish Release</h4>
+    <span class="badge">Conditional</span>
+  </div>
+  <p>Publish Release job</p>
+  <table>
+    <tr><td><strong>Runs On</strong></td><td>ubuntu-latest</td></tr>
+    <tr><td><strong>Depends On</strong></td><td>test, integration, self-document</td></tr>
+    <tr><td><strong>Condition</strong></td><td><code>(startsWith(github.ref, 'refs/tags/v') ||
+github.event_name == 'release' ||
+(github.event_name == 'workflow_dispatch' && inputs.publish_marketplace == true))
+</code></td></tr>
+  </table>
+  <div class="steps">
+    <p><strong>Steps</strong>:</p>
+    <ol>
+      <li>Checkout code</li>
+      <li>Extract Release Version</li>
+      <li>Download documentation artifacts</li>
+      <li>Download integration test artifacts</li>
+      <li>Create release archive</li>
+      <li>Create GitHub Release</li>
+      <li>Publish to Marketplace</li>
+    </ol>
+  </div>
+</div>
+
+<hr />
+<h2 id="execution-flow">Execution Flow</h2>
+<div class="codehilite"><pre><span></span><code>test
+  └─► integration
+    └─► self-document
+      └─► publish
+</code></pre></div>
+
+<hr />
+<h2 id="workflow-source">Workflow Source</h2>
+<div class="codehilite"><pre><span></span><code><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Test and Publish GHA Doc Action</span>
+
+<span class="nt">on</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">push</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">branches</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">main</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;releases/**&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">paths</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;gitopsiq/gha-doc/**&quot;</span>
+<span class="w">  </span><span class="nt">pull_request</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">branches</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">main</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">paths</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;gitopsiq/gha-doc/**&quot;</span>
+<span class="w">  </span><span class="nt">workflow_dispatch</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">inputs</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">publish_marketplace</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Publish</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">GitHub</span><span class="nv"> </span><span class="s">Marketplace&quot;</span>
+<span class="w">        </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">boolean</span>
+<span class="w">        </span><span class="nt">default</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">      </span><span class="nt">version</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Version</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">publish</span><span class="nv"> </span><span class="s">(e.g.,</span><span class="nv"> </span><span class="s">v1.2.0)&quot;</span>
+<span class="w">        </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">  </span><span class="nt">release</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">types</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">created</span><span class="p p-Indicator">]</span>
+
+<span class="nt">jobs</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">test</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Test gha-doc</span>
+<span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
+<span class="w">    </span><span class="nt">strategy</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">matrix</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">python-version</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;3.8&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;3.10&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;3.12&quot;</span><span class="p p-Indicator">]</span>
+
+<span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Checkout repository</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v3</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Set up Python ${{ matrix.python-version }}</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/setup-python@v4</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">python-version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ matrix.python-version }}</span>
+<span class="w">          </span><span class="nt">cache</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;pip&quot;</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Install dependencies</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">python -m pip install --upgrade pip</span>
+<span class="w">          </span><span class="no">cd gitopsiq/gha-doc</span>
+<span class="w">          </span><span class="no">pip install -r requirements.txt</span>
+<span class="w">          </span><span class="no">pip install pytest pytest-cov flake8 black mypy</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Check code formatting with Black</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">cd gitopsiq/gha-doc</span>
+<span class="w">          </span><span class="no">black --check --diff src tests</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Type check with MyPy</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">cd gitopsiq/gha-doc</span>
+<span class="w">          </span><span class="no">mypy --ignore-missing-imports src</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Lint with flake8</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">cd gitopsiq/gha-doc</span>
+<span class="w">          </span><span class="no"># stop the build if there are Python syntax errors or undefined names</span>
+<span class="w">          </span><span class="no">flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics</span>
+<span class="w">          </span><span class="no"># exit-zero treats all errors as warnings</span>
+<span class="w">          </span><span class="no">flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Run tests</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">cd gitopsiq/gha-doc</span>
+<span class="w">          </span><span class="no">pytest -xvs --cov=src --cov-report=xml tests/</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Upload Coverage Reports</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">codecov/codecov-action@v3</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">directory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./gitopsiq/gha-doc</span>
+<span class="w">          </span><span class="nt">files</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./gitopsiq/gha-doc/coverage.xml</span>
+<span class="w">          </span><span class="nt">flags</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gha-doc,python-${{ matrix.python-version }}</span>
+
+<span class="w">  </span><span class="nt">integration</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Integration Tests</span>
+<span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
+<span class="w">    </span><span class="nt">needs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">test</span>
+<span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Checkout repository</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v3</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Set up Node.js for Mermaid CLI</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/setup-node@v3</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">node-version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;16&quot;</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Install Mermaid CLI</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">npm install -g @mermaid-js/mermaid-cli</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Create test workflow files</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">mkdir -p test-workflows</span>
+<span class="w">          </span><span class="no">cat &gt; test-workflows/workflow1.yml &lt;&lt; EOL</span>
+<span class="w">          </span><span class="no">name: Test Workflow 1</span>
+<span class="w">          </span><span class="no">on: [push, pull_request]</span>
+<span class="w">          </span><span class="no">jobs:</span>
+<span class="w">            </span><span class="no">build:</span>
+<span class="w">              </span><span class="no">runs-on: ubuntu-latest</span>
+<span class="w">              </span><span class="no">steps:</span>
+<span class="w">                </span><span class="no">- uses: actions/checkout@v3</span>
+<span class="w">                </span><span class="no">- name: Run a test</span>
+<span class="w">                  </span><span class="no">run: echo &quot;Running test&quot;</span>
+<span class="w">          </span><span class="no">EOL</span>
+
+<span class="w">          </span><span class="no">cat &gt; test-workflows/workflow2.yml &lt;&lt; EOL</span>
+<span class="w">          </span><span class="no">name: Test Workflow 2</span>
+<span class="w">          </span><span class="no">on: workflow_dispatch</span>
+<span class="w">          </span><span class="no">jobs:</span>
+<span class="w">            </span><span class="no">test:</span>
+<span class="w">              </span><span class="no">runs-on: ubuntu-latest</span>
+<span class="w">              </span><span class="no">steps:</span>
+<span class="w">                </span><span class="no">- uses: actions/checkout@v3</span>
+<span class="w">            </span><span class="no">deploy:</span>
+<span class="w">              </span><span class="no">needs: test</span>
+<span class="w">              </span><span class="no">runs-on: ubuntu-latest</span>
+<span class="w">              </span><span class="no">steps:</span>
+<span class="w">                </span><span class="no">- uses: actions/checkout@v3</span>
+<span class="w">          </span><span class="no">EOL</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Run the gha-doc tool on test workflows</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">cd gitopsiq/gha-doc</span>
+<span class="w">          </span><span class="no">python -m pip install --upgrade pip</span>
+<span class="w">          </span><span class="no">pip install -r requirements.txt</span>
+<span class="w">          </span><span class="no">mkdir -p test-output</span>
+<span class="w">          </span><span class="no">python src/main_improved.py --workflow-files &quot;../../test-workflows/*.yml&quot; --output-dir &quot;test-output&quot; --format &quot;html&quot; --include-diagram-type &quot;svg&quot;</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Verify output files exist</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">cd gitopsiq/gha-doc</span>
+<span class="w">          </span><span class="no">ls -la test-output</span>
+<span class="w">          </span><span class="no"># Check if files were created</span>
+<span class="w">          </span><span class="no">if [ ! -f &quot;test-output/workflow1.html&quot; ] || [ ! -f &quot;test-output/workflow2.html&quot; ]; then</span>
+<span class="w">            </span><span class="no">echo &quot;Output files not found!&quot;</span>
+<span class="w">            </span><span class="no">exit 1</span>
+<span class="w">          </span><span class="no">fi</span>
+<span class="w">          </span><span class="no"># Check if diagram files were created</span>
+<span class="w">          </span><span class="no">if [ ! -f &quot;test-output/workflow1-diagram.svg&quot; ] || [ ! -f &quot;test-output/workflow2-diagram.svg&quot; ]; then</span>
+<span class="w">            </span><span class="no">echo &quot;Diagram files not found!&quot;</span>
+<span class="w">            </span><span class="no">exit 1</span>
+<span class="w">          </span><span class="no">fi</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Upload test artifacts</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/upload-artifact@v3</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integration-test-output</span>
+<span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gitopsiq/gha-doc/test-output</span>
+<span class="w">          </span><span class="nt">retention-days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7</span>
+
+<span class="w">  </span><span class="nt">self-document</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Self-test Documentation Generator</span>
+<span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
+<span class="w">    </span><span class="nt">needs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integration</span>
+<span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Checkout repository</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v3</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Set up Node.js for Mermaid CLI</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/setup-node@v3</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">node-version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;16&quot;</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Install Mermaid CLI</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">npm install -g @mermaid-js/mermaid-cli</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Generate documentation for workflow files</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./gitopsiq/gha-doc</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">workflow_files</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;.github/workflows/*.yml&quot;</span>
+<span class="w">          </span><span class="nt">output_dir</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gitopsiq/gha-doc/docs/workflows&quot;</span>
+<span class="w">          </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;html&quot;</span>
+<span class="w">          </span><span class="nt">generate_diagrams</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">          </span><span class="nt">include_diagram_type</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;svg&quot;</span>
+<span class="w">          </span><span class="nt">include_source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">          </span><span class="nt">ai_enhancement</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Upload documentation artifacts</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/upload-artifact@v3</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">workflow-documentation</span>
+<span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gitopsiq/gha-doc/docs/workflows</span>
+<span class="w">          </span><span class="nt">retention-days</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">14</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Commit documentation changes</span>
+<span class="w">        </span><span class="nt">if</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github.ref == &#39;refs/heads/main&#39; &amp;&amp; github.event_name != &#39;pull_request&#39;</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">stefanzweifel/git-auto-commit-action@v4</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">commit_message</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;docs:</span><span class="nv"> </span><span class="s">update</span><span class="nv"> </span><span class="s">workflow</span><span class="nv"> </span><span class="s">documentation&quot;</span>
+<span class="w">          </span><span class="nt">file_pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;gitopsiq/gha-doc/docs/workflows/*&quot;</span>
+
+<span class="w">  </span><span class="nt">publish</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Publish Release</span>
+<span class="w">    </span><span class="nt">if</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">      </span><span class="no">(startsWith(github.ref, &#39;refs/tags/v&#39;) ||</span>
+<span class="w">      </span><span class="no">github.event_name == &#39;release&#39; ||</span>
+<span class="w">      </span><span class="no">(github.event_name == &#39;workflow_dispatch&#39; &amp;&amp; inputs.publish_marketplace == true))</span>
+<span class="w">    </span><span class="nt">needs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">test</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">integration</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">self-document</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
+
+<span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Checkout code</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v3</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Extract Release Version</span>
+<span class="w">        </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">get_version</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">if [[ $GITHUB_REF == refs/tags/* ]]; then</span>
+<span class="w">            </span><span class="no">echo &quot;VERSION=${GITHUB_REF#refs/tags/v}&quot; &gt;&gt; $GITHUB_OUTPUT</span>
+<span class="w">          </span><span class="no">elif [[ &quot;${{ github.event.inputs.version }}&quot; != &quot;&quot; ]]; then</span>
+<span class="w">            </span><span class="no">echo &quot;VERSION=${{ github.event.inputs.version }}&quot; &gt;&gt; $GITHUB_OUTPUT</span>
+<span class="w">          </span><span class="no">else</span>
+<span class="w">            </span><span class="no"># Generate version based on date and commit hash</span>
+<span class="w">            </span><span class="no">HASH=$(git rev-parse --short HEAD)</span>
+<span class="w">            </span><span class="no">DATE=$(date +&#39;%Y%m%d&#39;)</span>
+<span class="w">            </span><span class="no">echo &quot;VERSION=${DATE}-${HASH}&quot; &gt;&gt; $GITHUB_OUTPUT</span>
+<span class="w">          </span><span class="no">fi</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Download documentation artifacts</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/download-artifact@v3</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">workflow-documentation</span>
+<span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">docs</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Download integration test artifacts</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/download-artifact@v3</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integration-test-output</span>
+<span class="w">          </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">test-output</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Create release archive</span>
+<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">mkdir -p release-package</span>
+<span class="w">          </span><span class="no">cp -r gitopsiq/gha-doc/* release-package/</span>
+<span class="w">          </span><span class="no">cp -r docs release-package/</span>
+<span class="w">          </span><span class="no">cp -r test-output release-package/examples/generated</span>
+<span class="w">          </span><span class="no">tar -czvf gha-doc-${{ steps.get_version.outputs.VERSION }}.tar.gz -C release-package .</span>
+<span class="w">          </span><span class="no">zip -r gha-doc-${{ steps.get_version.outputs.VERSION }}.zip release-package</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Create GitHub Release</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">softprops/action-gh-release@v1</span>
+<span class="w">        </span><span class="nt">if</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">startsWith(github.ref, &#39;refs/tags/&#39;) || github.event_name == &#39;release&#39;</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gha-doc v${{ steps.get_version.outputs.VERSION }}</span>
+<span class="w">          </span><span class="nt">tag_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ startsWith(github.ref, &#39;refs/tags/&#39;) &amp;&amp; github.ref_name || format(&#39;v{0}&#39;, steps.get_version.outputs.VERSION) }}</span>
+<span class="w">          </span><span class="nt">draft</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">          </span><span class="nt">prerelease</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="w">          </span><span class="nt">generate_release_notes</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">          </span><span class="nt">files</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">            </span><span class="no">gha-doc-${{ steps.get_version.outputs.VERSION }}.tar.gz</span>
+<span class="w">            </span><span class="no">gha-doc-${{ steps.get_version.outputs.VERSION }}.zip</span>
+<span class="w">            </span><span class="no">gitopsiq/gha-doc/README.md</span>
+<span class="w">            </span><span class="no">gitopsiq/gha-doc/LICENSE</span>
+<span class="w">            </span><span class="no">gitopsiq/gha-doc/GETTING_STARTED.md</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Publish to Marketplace</span>
+<span class="w">        </span><span class="nt">if</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">          </span><span class="no">(startsWith(github.ref, &#39;refs/tags/v&#39;) ||</span>
+<span class="w">          </span><span class="no">github.event_name == &#39;release&#39; ||</span>
+<span class="w">          </span><span class="no">(github.event_name == &#39;workflow_dispatch&#39; &amp;&amp; inputs.publish_marketplace == true))</span>
+<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/github-script@v6</span>
+<span class="w">        </span><span class="nt">with</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">github-token</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.GITHUB_TOKEN }}</span>
+<span class="w">          </span><span class="nt">script</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">            </span><span class="no">const fs = require(&#39;fs&#39;);</span>
+<span class="w">            </span><span class="no">const actionYml = fs.readFileSync(&#39;gitopsiq/gha-doc/action.yml&#39;, &#39;utf8&#39;);</span>
+
+<span class="w">            </span><span class="no">// Set up marketplace listing to point to the right version</span>
+<span class="w">            </span><span class="no">const version = &#39;${{ steps.get_version.outputs.VERSION }}&#39;;</span>
+
+<span class="w">            </span><span class="no">console.log(`Publishing version ${version} to GitHub Marketplace`);</span>
+
+<span class="w">            </span><span class="no">// In a real scenario, you would use GitHub API to update the marketplace listing</span>
+<span class="w">            </span><span class="no">// This is a placeholder as direct API for updating marketplace listings is limited</span>
+<span class="w">            </span><span class="no">console.log(&#39;Action would be published to marketplace with version&#39;, version);</span>
+</code></pre></div>
+
+<hr />
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="https://docs.github.com/en/actions">GitHub Actions Documentation</a></li>
+<li><a href="https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions">Workflow Syntax Reference</a></li>
+</ul>
+<hr />
+
+      <div class="footer">
+        <p>Generated by GitHub Actions Documentation Generator v1.0.0</p>
+        <p>
+          Last updated: 2025-06-16 •
+          <a href="https://github.com/your-username/gha-doc/issues">Report an issue</a>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

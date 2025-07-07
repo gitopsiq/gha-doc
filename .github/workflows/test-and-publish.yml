@@ -4,11 +4,11 @@ on:
   push:
     branches: [main, "releases/**"]
     paths:
-      - "stratus-gh-actions/gha-doc/**"
+      - "gitopsiq/gha-doc/**"
   pull_request:
     branches: [main]
     paths:
-      - "stratus-gh-actions/gha-doc/**"
+      - "gitopsiq/gha-doc/**"
   workflow_dispatch:
     inputs:
       publish_marketplace:
@@ -42,23 +42,23 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          cd stratus-gh-actions/gha-doc
+          cd gitopsiq/gha-doc
           pip install -r requirements.txt
           pip install pytest pytest-cov flake8 black mypy
 
       - name: Check code formatting with Black
         run: |
-          cd stratus-gh-actions/gha-doc
+          cd gitopsiq/gha-doc
           black --check --diff src tests
 
       - name: Type check with MyPy
         run: |
-          cd stratus-gh-actions/gha-doc
+          cd gitopsiq/gha-doc
           mypy --ignore-missing-imports src
 
       - name: Lint with flake8
         run: |
-          cd stratus-gh-actions/gha-doc
+          cd gitopsiq/gha-doc
           # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings
@@ -66,14 +66,14 @@ jobs:
 
       - name: Run tests
         run: |
-          cd stratus-gh-actions/gha-doc
+          cd gitopsiq/gha-doc
           pytest -xvs --cov=src --cov-report=xml tests/
 
       - name: Upload Coverage Reports
         uses: codecov/codecov-action@v3
         with:
-          directory: ./stratus-gh-actions/gha-doc
-          files: ./stratus-gh-actions/gha-doc/coverage.xml
+          directory: ./gitopsiq/gha-doc
+          files: ./gitopsiq/gha-doc/coverage.xml
           flags: gha-doc,python-${{ matrix.python-version }}
 
   integration:
@@ -124,15 +124,15 @@ jobs:
 
       - name: Run the gha-doc tool on test workflows
         run: |
-          cd stratus-gh-actions/gha-doc
+          cd gitopsiq/gha-doc
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           mkdir -p test-output
-          python src/main_improved.py --workflow-files "../../test-workflows/*.yml" --output-dir "test-output" --format "html" --generate-diagrams true --diagram-format "svg"
+          python src/main_improved.py --workflow-files "../../test-workflows/*.yml" --output-dir "test-output" --format "html" --include-diagram-type "svg"
 
       - name: Verify output files exist
         run: |
-          cd stratus-gh-actions/gha-doc
+          cd gitopsiq/gha-doc
           ls -la test-output
           # Check if files were created
           if [ ! -f "test-output/workflow1.html" ] || [ ! -f "test-output/workflow2.html" ]; then
@@ -149,7 +149,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: integration-test-output
-          path: stratus-gh-actions/gha-doc/test-output
+          path: gitopsiq/gha-doc/test-output
           retention-days: 7
 
   self-document:
@@ -169,13 +169,13 @@ jobs:
         run: npm install -g @mermaid-js/mermaid-cli
 
       - name: Generate documentation for workflow files
-        uses: ./stratus-gh-actions/gha-doc
+        uses: ./gitopsiq/gha-doc
         with:
           workflow_files: ".github/workflows/*.yml"
-          output_dir: "stratus-gh-actions/gha-doc/docs/workflows"
+          output_dir: "gitopsiq/gha-doc/docs/workflows"
           format: "html"
           generate_diagrams: true
-          diagram_format: "svg"
+          include_diagram_type: "svg"
           include_source: false
           ai_enhancement: false
 
@@ -183,7 +183,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: workflow-documentation
-          path: stratus-gh-actions/gha-doc/docs/workflows
+          path: gitopsiq/gha-doc/docs/workflows
           retention-days: 14
 
       - name: Commit documentation changes
@@ -191,7 +191,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "docs: update workflow documentation"
-          file_pattern: "stratus-gh-actions/gha-doc/docs/workflows/*"
+          file_pattern: "gitopsiq/gha-doc/docs/workflows/*"
 
   publish:
     name: Publish Release
@@ -235,7 +235,7 @@ jobs:
       - name: Create release archive
         run: |
           mkdir -p release-package
-          cp -r stratus-gh-actions/gha-doc/* release-package/
+          cp -r gitopsiq/gha-doc/* release-package/
           cp -r docs release-package/
           cp -r test-output release-package/examples/generated
           tar -czvf gha-doc-${{ steps.get_version.outputs.VERSION }}.tar.gz -C release-package .
@@ -253,9 +253,9 @@ jobs:
           files: |
             gha-doc-${{ steps.get_version.outputs.VERSION }}.tar.gz
             gha-doc-${{ steps.get_version.outputs.VERSION }}.zip
-            stratus-gh-actions/gha-doc/README.md
-            stratus-gh-actions/gha-doc/LICENSE
-            stratus-gh-actions/gha-doc/GETTING_STARTED.md
+            gitopsiq/gha-doc/README.md
+            gitopsiq/gha-doc/LICENSE
+            gitopsiq/gha-doc/GETTING_STARTED.md
 
       - name: Publish to Marketplace
         if: |
@@ -267,7 +267,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const actionYml = fs.readFileSync('stratus-gh-actions/gha-doc/action.yml', 'utf8');
+            const actionYml = fs.readFileSync('gitopsiq/gha-doc/action.yml', 'utf8');
 
             // Set up marketplace listing to point to the right version
             const version = '${{ steps.get_version.outputs.VERSION }}';

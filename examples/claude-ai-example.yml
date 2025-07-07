@@ -1,0 +1,38 @@
+name: Update Documentation with Claude AI
+
+on:
+  workflow_dispatch: # Manual trigger
+  schedule:
+    - cron: "0 0 * * 1" # Weekly on Monday at midnight
+
+jobs:
+  document:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Generate documentation with Claude AI enhancement
+        uses: gitopsiq/gha-doc@v1
+        with:
+          workflow_files: ".github/workflows/*.yml"
+          output_dir: "docs/workflows"
+          format: "html"
+          generate_diagrams: true
+
+          # AI enhancement configuration with Anthropic Claude
+          ai_enhancement: true
+          ai_provider: "anthropic"
+
+          # Anthropic configuration
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_model: "claude-2"
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit-message: "docs: update workflow documentation with Claude AI"
+          file_pattern: "docs/workflows/*"

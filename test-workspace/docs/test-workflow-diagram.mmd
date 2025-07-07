@@ -1,0 +1,15 @@
+graph TD;
+    code-quality["Code Quality & Linting"];
+    security-scan["Security Scanning"];
+    test["Unit & Integration Tests (Matrix)"];
+    build["Build & Package"];
+    deploy-staging["Deploy to Staging"];
+    deploy-production["Deploy to Production"];
+    code-quality --> security-scan;
+    code-quality --> test;
+    security-scan --> test;
+    test --> build;
+    build --> deploy-staging;
+    deploy-staging --> deploy-production;
+    style deploy-staging fill:#e0f0ff,stroke:#0067b8,stroke-dasharray: 5 5
+    style deploy-production fill:#e0f0ff,stroke:#0067b8,stroke-dasharray: 5 5
